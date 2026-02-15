@@ -2,91 +2,123 @@ Zero-Local-Build Deployment Manual
 (Laravel Platform + Laravel-H5P package on Ubuntu 22 / Plesk / MySQL)
 ======================================================================
 
-You asked for a branch you can download as zip, upload to Plesk, extract, and deploy without building locally.
-This branch now includes that flow.
+You asked for: download branch zip, upload to Plesk, and deploy.
+This branch supports exactly that flow.
 
-What you upload
----------------
-Upload THIS branch zip to your domain `httpdocs`, then run one deployment script:
+What this branch provides
+-------------------------
+After extracting this branch in `httpdocs`, you can deploy in two ways:
 
-  ./scripts/auto_deploy_on_vps.sh
+1) CLI mode:
+   `./scripts/auto_deploy_on_vps.sh`
 
-The script will:
-1) create a full Laravel 12 app,
-2) integrate this package as local source,
-3) configure `.env` for MySQL,
-4) run migrations and `h5p:install`,
-5) optimize Laravel and publish the final platform into your domain root.
+2) Web-button mode:
+   open `deploy-web/index.php` and click **Run Deployment**
+
+Both modes run the same deployment script and will:
+- create a full Laravel 12 app,
+- integrate this package as local source,
+- configure `.env` for MySQL,
+- run migrations + `php artisan h5p:install`,
+- optimize Laravel and publish final app into domain root.
 
 
 A) PLESK PREP
 -------------
 1. Plesk -> Websites & Domains -> your domain.
 2. Hosting Settings -> ensure PHP is 8.2+.
-3. In PHP settings, set:
-   - memory_limit: 512M recommended
+3. PHP settings recommended:
+   - memory_limit: 512M
    - max_execution_time: 120+
-   - upload_max_filesize/post_max_size: 64M+ for H5P
+   - upload_max_filesize/post_max_size: 64M+
 
 
 B) CREATE MYSQL DATABASE (PLESK + PHPMYADMIN)
 ----------------------------------------------
 1. Plesk -> Databases -> Add Database.
-2. Create a DB user with full privileges on that DB.
-3. Open phpMyAdmin and verify login works.
+2. Create DB user with full privileges on this DB.
+3. Open phpMyAdmin and verify login.
 
 
-C) UPLOAD + DEPLOY
-------------------
-1. Download this branch as zip from GitHub.
-2. In Plesk File Manager, upload zip to `httpdocs`.
+C) UPLOAD BRANCH ZIP
+--------------------
+1. Download this branch zip from GitHub.
+2. Upload zip to `httpdocs` via Plesk File Manager.
 3. Extract zip in `httpdocs`.
-4. Open Plesk Terminal (or SSH) at `httpdocs` and run:
-
-   chmod +x scripts/auto_deploy_on_vps.sh
-   ./scripts/auto_deploy_on_vps.sh
-
-5. Provide prompts when asked:
-   - MySQL DB name
-   - MySQL username
-   - MySQL password
-   - App URL (`https://your-domain.com`)
-
-6. After script completes, set Hosting Settings document root to:
-
-   httpdocs/public
 
 
-D) FINAL CHECKS
+D) DEPLOY OPTION 1: CLI MODE
+-----------------------------
+In Plesk Terminal (or SSH), at `httpdocs`:
+
+  chmod +x scripts/auto_deploy_on_vps.sh
+  ./scripts/auto_deploy_on_vps.sh
+
+Enter prompts:
+- MySQL DB name
+- MySQL username
+- MySQL password
+- App URL (e.g. `https://your-domain.com`)
+
+
+E) DEPLOY OPTION 2: WEB-BUTTON MODE
+------------------------------------
+1. In Plesk, set environment variable for protection:
+
+   H5P_WEB_DEPLOY_PASSWORD=choose-a-strong-random-password
+
+2. Open in browser:
+
+   https://your-domain.com/deploy-web/index.php
+
+3. Enter:
+   - Deployment password
+   - DB name
+   - DB user
+   - DB password
+   - App URL
+
+4. Click **Run Deployment**.
+5. Watch progress log on the same page.
+
+
+F) AFTER DEPLOY
+---------------
+Set document root to:
+
+  httpdocs/public
+
+
+G) FINAL CHECKS
 ---------------
 Run:
 
   php artisan about
   php artisan h5p:status
 
-In browser verify:
-- Home page loads
-- H5P routes load
-- H5P upload works
-- `h5p_*` tables exist in MySQL
+Browser checks:
+- home page loads,
+- H5P routes load,
+- H5P upload works,
+- `h5p_*` tables exist in MySQL.
 
 
-E) IMPORTANT NOTES
+H) IMPORTANT NOTES
 ------------------
-- This repository is a package (`composer type=library`), not a standalone app.
-- The included script builds the full Laravel platform for you on the VPS automatically.
-- No local machine build steps are required.
+- This repository is a package (`composer type=library`), not standalone app.
+- The included deploy script builds full Laravel platform on the VPS.
+- No local build required.
 
 
-F) TROUBLESHOOTING
+I) TROUBLESHOOTING
 ------------------
-1. If deployment fails due Composer network access on VPS:
-   - ensure outbound HTTPS is allowed from server to Packagist/GitHub.
+1. Composer network error on VPS:
+   - allow outbound HTTPS to Packagist/GitHub.
 
-2. If database fails:
+2. DB errors:
    - validate credentials in phpMyAdmin,
-   - rerun: `php artisan migrate --force`.
+   - rerun `php artisan migrate --force`.
 
-3. If permissions fail:
+3. Permission errors:
    - ensure web user can write `storage/` and `bootstrap/cache/`.
 

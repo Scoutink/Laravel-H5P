@@ -124,8 +124,9 @@ storage/app/public/h5p/
 You can deploy this branch directly from a GitHub zip upload:
 
 1. Upload and extract this branch in Plesk `httpdocs`.
-2. Run the included one-command deploy script:
-   - `./scripts/auto_deploy_on_vps.sh`
+2. Deploy either by:
+   - CLI script: `./scripts/auto_deploy_on_vps.sh`
+   - Web UI: open `deploy-web/index.php` in browser and click **Run Deployment** (set `H5P_WEB_DEPLOY_PASSWORD` first)
 3. Set document root to `httpdocs/public`.
 
 See:

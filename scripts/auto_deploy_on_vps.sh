@@ -4,21 +4,67 @@ set -euo pipefail
 # One-command deploy helper for Plesk VPS after uploading THIS repository zip.
 # It builds a full Laravel app in the current directory and integrates this package.
 
-if [[ ! -f composer.json ]]; then
-  echo "Run this script from the extracted Laravel-H5P repository root."
+usage() {
+  cat <<USAGE
+Usage: $0 [options]
+
+Options:
+  --db-name <name>       MySQL database name
+  --db-user <user>       MySQL username
+  --db-pass <pass>       MySQL password
+  --app-url <url>        Application URL (e.g. https://example.com)
+  --domain-root <path>   Domain root where repository zip was extracted (default: current dir)
+  --non-interactive      Fail instead of prompting when required values are missing
+  -h, --help             Show help
+USAGE
+}
+
+DB_NAME="${DB_NAME:-}"
+DB_USER="${DB_USER:-}"
+DB_PASS="${DB_PASS:-}"
+APP_URL="${APP_URL:-}"
+DOMAIN_ROOT="$(pwd)"
+NON_INTERACTIVE=0
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --db-name) DB_NAME="$2"; shift 2 ;;
+    --db-user) DB_USER="$2"; shift 2 ;;
+    --db-pass) DB_PASS="$2"; shift 2 ;;
+    --app-url) APP_URL="$2"; shift 2 ;;
+    --domain-root) DOMAIN_ROOT="$2"; shift 2 ;;
+    --non-interactive) NON_INTERACTIVE=1; shift ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "Unknown argument: $1"; usage; exit 1 ;;
+  esac
+done
+
+if [[ ! -f "$DOMAIN_ROOT/composer.json" ]]; then
+  echo "Run this script from the extracted Laravel-H5P repository root or pass --domain-root."
   exit 1
 fi
 
-DOMAIN_ROOT="$(pwd)"
+if [[ -z "$DB_NAME" ]]; then
+  if [[ "$NON_INTERACTIVE" -eq 1 ]]; then echo "Missing required --db-name"; exit 1; fi
+  read -rp "MySQL database name: " DB_NAME
+fi
+if [[ -z "$DB_USER" ]]; then
+  if [[ "$NON_INTERACTIVE" -eq 1 ]]; then echo "Missing required --db-user"; exit 1; fi
+  read -rp "MySQL username: " DB_USER
+fi
+if [[ -z "$DB_PASS" ]]; then
+  if [[ "$NON_INTERACTIVE" -eq 1 ]]; then echo "Missing required --db-pass"; exit 1; fi
+  read -rsp "MySQL password: " DB_PASS
+  echo
+fi
+if [[ -z "$APP_URL" ]]; then
+  if [[ "$NON_INTERACTIVE" -eq 1 ]]; then echo "Missing required --app-url"; exit 1; fi
+  read -rp "App URL (e.g. https://example.com): " APP_URL
+fi
+
 WORKDIR="$DOMAIN_ROOT/.build-laravel-h5p-platform"
 APP_DIR="$WORKDIR/app"
 PACKAGE_DST="$APP_DIR/packages/laravel-h5p"
-
-read -rp "MySQL database name: " DB_NAME
-read -rp "MySQL username: " DB_USER
-read -rsp "MySQL password: " DB_PASS
-echo
-read -rp "App URL (e.g. https://example.com): " APP_URL
 
 rm -rf "$WORKDIR"
 mkdir -p "$WORKDIR"

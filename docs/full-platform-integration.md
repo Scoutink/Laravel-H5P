@@ -3,13 +3,17 @@
 ## What changed
 
 This branch now supports a **zip-upload + one-command deploy** flow for Plesk.
-You upload this repository zip, extract it in `httpdocs`, and run:
+You upload this repository zip, extract it in `httpdocs`, then deploy using either:
 
 ```bash
 ./scripts/auto_deploy_on_vps.sh
 ```
 
-That script auto-builds a full Laravel platform and installs this package into it.
+or web UI:
+
+`deploy-web/index.php` (click **Run Deployment**)
+
+Both paths execute the same deploy script and auto-build a full Laravel platform with this package.
 
 ## Why this is required
 
@@ -37,3 +41,8 @@ So deployment must assemble a Laravel application and include this package as de
 - MySQL password
 - Application URL
 
+
+## Web deployer safety
+
+Before using `deploy-web/index.php`, set `H5P_WEB_DEPLOY_PASSWORD` in Plesk environment variables.
+This password is required by the page before it can start deployment.
