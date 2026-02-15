@@ -1,170 +1,92 @@
-Laravel + Laravel-H5P Complete Deployment Manual
-(Ubuntu 22 VPS + Plesk UI + MySQL/phpMyAdmin)
-=================================================
+Zero-Local-Build Deployment Manual
+(Laravel Platform + Laravel-H5P package on Ubuntu 22 / Plesk / MySQL)
+======================================================================
 
-This guide delivers exactly what you asked for:
-1) a full Laravel platform that includes this plugin,
-2) detailed integration workflow,
-3) VPS installation steps via Plesk + phpMyAdmin.
+You asked for a branch you can download as zip, upload to Plesk, extract, and deploy without building locally.
+This branch now includes that flow.
 
------------------------------------------------------------------
-PART 1 — BUILD A FULL LARAVEL PLATFORM INCLUDING THIS PLUGIN
------------------------------------------------------------------
+What you upload
+---------------
+Upload THIS branch zip to your domain `httpdocs`, then run one deployment script:
 
-This repository is a package (composer type=library), so the deployable artifact must be a
-full Laravel application that contains this package.
+  ./scripts/auto_deploy_on_vps.sh
 
-Method A (automated - recommended)
-----------------------------------
-From this repository root:
-
-  ./scripts/build_full_platform.sh \
-    --app-name laravel-h5p-platform \
-    --laravel-version ^12.0 \
-    --output-dir ./build
-
-Output:
-  build/laravel-h5p-platform-deploy.zip
-
-Method B (manual)
------------------
-1) Create app:
-
-   composer create-project laravel/laravel:^12.0 laravel-h5p-platform
-
-2) Copy package source into app:
-
-   mkdir -p laravel-h5p-platform/packages
-   cp -a Laravel-H5P laravel-h5p-platform/packages/laravel-h5p
-
-3) Register local package path repository:
-
-   cd laravel-h5p-platform
-   composer config repositories.laravel-h5p '{"type":"path","url":"packages/laravel-h5p","options":{"symlink":false}}'
-
-4) Install package:
-
-   composer require djoudi/laravel-h5p:@dev
-
-5) Prepare app baseline:
-
-   cp .env.example .env
-   php artisan key:generate
-
-6) Build production dependencies:
-
-   composer install --no-dev --optimize-autoloader
-
-7) Create deploy zip from Laravel app root:
-
-   zip -r ../laravel-h5p-platform-deploy.zip .
+The script will:
+1) create a full Laravel 12 app,
+2) integrate this package as local source,
+3) configure `.env` for MySQL,
+4) run migrations and `h5p:install`,
+5) optimize Laravel and publish the final platform into your domain root.
 
 
------------------------------------------------------------------
-PART 2 — PLESK UI DEPLOYMENT ON UBUNTU 22
------------------------------------------------------------------
-
-1) Plesk -> Websites & Domains -> your-domain.
-2) Open File Manager and upload `laravel-h5p-platform-deploy.zip` to `httpdocs`.
-3) Extract zip inside `httpdocs`.
-4) Set Document Root to Laravel `public` directory:
-
-   Websites & Domains -> Hosting Settings -> Document root = `httpdocs/public`
-
-5) PHP settings in Plesk:
-   - PHP 8.2 or newer
-   - memory_limit >= 256M (512M recommended)
-   - max_execution_time >= 120
-   - upload_max_filesize/post_max_size >= 64M (or more for H5P content)
-
-6) Ensure writable folders:
-   - `storage/`
-   - `bootstrap/cache/`
-
-7) Use Plesk Composer tool (or SSH) in `httpdocs`:
-
-   composer install --no-dev --optimize-autoloader
+A) PLESK PREP
+-------------
+1. Plesk -> Websites & Domains -> your domain.
+2. Hosting Settings -> ensure PHP is 8.2+.
+3. In PHP settings, set:
+   - memory_limit: 512M recommended
+   - max_execution_time: 120+
+   - upload_max_filesize/post_max_size: 64M+ for H5P
 
 
------------------------------------------------------------------
-PART 3 — MYSQL + PHPMYADMIN CONFIGURATION (PLESK)
------------------------------------------------------------------
-
-1) Plesk -> Databases -> Add Database:
-   - DB name: e.g. `laravel_h5p`
-   - Related site: your domain
-
-2) Create DB user and assign full privileges for this DB.
-
-3) Open phpMyAdmin from Plesk and confirm DB is reachable.
-
-4) Edit `.env` in `httpdocs` with these values:
-
-   APP_NAME="Laravel H5P Platform"
-   APP_ENV=production
-   APP_DEBUG=false
-   APP_URL=https://your-domain.com
-
-   DB_CONNECTION=mysql
-   DB_HOST=127.0.0.1
-   DB_PORT=3306
-   DB_DATABASE=laravel_h5p
-   DB_USERNAME=your_db_user
-   DB_PASSWORD=your_db_password
-
-   H5P_STORAGE_PATH=h5p
-   LRS_ENABLED=false
-
-5) Run production setup commands (Plesk terminal or SSH at `httpdocs`):
-
-   php artisan migrate --force
-   php artisan h5p:install
-   php artisan storage:link
-   php artisan optimize:clear
-   php artisan config:cache
-   php artisan route:cache
-   php artisan view:cache
+B) CREATE MYSQL DATABASE (PLESK + PHPMYADMIN)
+----------------------------------------------
+1. Plesk -> Databases -> Add Database.
+2. Create a DB user with full privileges on that DB.
+3. Open phpMyAdmin and verify login works.
 
 
------------------------------------------------------------------
-PART 4 — VERIFICATION (BUG-FREE BASELINE CHECK)
------------------------------------------------------------------
+C) UPLOAD + DEPLOY
+------------------
+1. Download this branch as zip from GitHub.
+2. In Plesk File Manager, upload zip to `httpdocs`.
+3. Extract zip in `httpdocs`.
+4. Open Plesk Terminal (or SSH) at `httpdocs` and run:
 
+   chmod +x scripts/auto_deploy_on_vps.sh
+   ./scripts/auto_deploy_on_vps.sh
+
+5. Provide prompts when asked:
+   - MySQL DB name
+   - MySQL username
+   - MySQL password
+   - App URL (`https://your-domain.com`)
+
+6. After script completes, set Hosting Settings document root to:
+
+   httpdocs/public
+
+
+D) FINAL CHECKS
+---------------
 Run:
 
   php artisan about
   php artisan h5p:status
 
-Then verify in browser:
-
-- App home page works (no 500 error)
-- H5P admin pages load
-- Upload an H5P file/library
-- H5P files are written under `storage/app/public/h5p`
-- MySQL contains `h5p_*` tables
+In browser verify:
+- Home page loads
+- H5P routes load
+- H5P upload works
+- `h5p_*` tables exist in MySQL
 
 
------------------------------------------------------------------
-PART 5 — TROUBLESHOOTING
------------------------------------------------------------------
+E) IMPORTANT NOTES
+------------------
+- This repository is a package (`composer type=library`), not a standalone app.
+- The included script builds the full Laravel platform for you on the VPS automatically.
+- No local machine build steps are required.
 
-A) 500 error
-- check `.env`
-- run `php artisan optimize:clear`
-- fix ownership/permissions of `storage/` and `bootstrap/cache/`
-- inspect Plesk Logs
 
-B) Package not found/autoload errors
-- confirm `packages/laravel-h5p` exists in deployed app
-- run `composer dump-autoload -o`
-- run `composer install --no-dev --optimize-autoloader`
+F) TROUBLESHOOTING
+------------------
+1. If deployment fails due Composer network access on VPS:
+   - ensure outbound HTTPS is allowed from server to Packagist/GitHub.
 
-C) Assets/H5P files not accessible
-- run `php artisan storage:link`
-- run `php artisan h5p:publish --assets --force`
+2. If database fails:
+   - validate credentials in phpMyAdmin,
+   - rerun: `php artisan migrate --force`.
 
-D) DB connection errors
-- validate `.env` DB values
-- test DB login in phpMyAdmin
-- ensure user privileges include ALTER/CREATE/INDEX/INSERT/UPDATE/DELETE
+3. If permissions fail:
+   - ensure web user can write `storage/` and `bootstrap/cache/`.
 

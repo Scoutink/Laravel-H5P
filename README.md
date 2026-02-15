@@ -119,19 +119,19 @@ storage/app/public/h5p/
 └── temp/         # Temporary files
 ```
 
-## 🧭 Deploying as a Full Laravel Platform (Plesk + Ubuntu 22 + MySQL)
+## 🧭 Deploying as Zip on Plesk (No Local Build)
 
-This repository is a **Laravel package**, not a standalone Laravel application.
-For production, create a full Laravel app and integrate this package into it.
+You can deploy this branch directly from a GitHub zip upload:
 
-Use one of these guides:
+1. Upload and extract this branch in Plesk `httpdocs`.
+2. Run the included one-command deploy script:
+   - `./scripts/auto_deploy_on_vps.sh`
+3. Set document root to `httpdocs/public`.
 
-- `docs/full-platform-integration.md` (integration architecture + workflow)
-- `PLESK_DEPLOYMENT_MANUAL.txt` (complete Plesk/phpMyAdmin VPS deployment runbook)
+See:
 
-Optional helper script to build a deployable full-platform zip:
-
-- `./scripts/build_full_platform.sh`
+- `PLESK_DEPLOYMENT_MANUAL.txt` (step-by-step Plesk + phpMyAdmin guide)
+- `docs/full-platform-integration.md` (what the script integrates internally)
 
 ## 🤝 Contributing
 

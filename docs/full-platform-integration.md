@@ -1,113 +1,39 @@
-# Full Laravel Platform Integration Guide (with Laravel H5P package)
+# Full Laravel Platform Integration (No Local Build)
 
-This document explains exactly how to create a **full Laravel platform** and integrate this package into it.
+## What changed
 
-## 1) Forensic analysis and architectural conclusion
-
-`composer.json` in this repository defines:
-
-- `"type": "library"`
-- package name: `djoudi/laravel-h5p`
-- Laravel provider auto-discovery metadata under `extra.laravel`
-
-This confirms the repository is a package to be installed into a normal Laravel application, not deployed standalone as a website root.
-
----
-
-## 2) Two supported integration modes
-
-### Mode A (recommended): Local path package (best for custom edits)
-
-Use when you want to modify package source and deploy those edits immediately.
-
-1. Create Laravel app:
-   ```bash
-   composer create-project laravel/laravel:^12.0 laravel-h5p-platform
-   ```
-2. Copy this repository into app:
-   ```bash
-   mkdir -p laravel-h5p-platform/packages
-   cp -a Laravel-H5P laravel-h5p-platform/packages/laravel-h5p
-   ```
-3. Register path repository:
-   ```bash
-   cd laravel-h5p-platform
-   composer config repositories.laravel-h5p '{"type":"path","url":"packages/laravel-h5p","options":{"symlink":false}}'
-   ```
-4. Require package:
-   ```bash
-   composer require djoudi/laravel-h5p:@dev
-   ```
-
-### Mode B: Composer package from registry
-
-Use when you do not need local source edits:
+This branch now supports a **zip-upload + one-command deploy** flow for Plesk.
+You upload this repository zip, extract it in `httpdocs`, and run:
 
 ```bash
-composer require djoudi/laravel-h5p
+./scripts/auto_deploy_on_vps.sh
 ```
 
----
+That script auto-builds a full Laravel platform and installs this package into it.
 
-## 3) Automated builder script included in this repo
+## Why this is required
 
-To reduce human error, use:
+This repository is a Composer package (`type: library`), not a complete Laravel app.
+So deployment must assemble a Laravel application and include this package as dependency.
 
-```bash
-./scripts/build_full_platform.sh
-```
+## Integration details performed by the script
 
-What it does:
+1. Creates Laravel `^12.0` project.
+2. Copies this repo into `packages/laravel-h5p`.
+3. Adds Composer `path` repository.
+4. Requires `djoudi/laravel-h5p:@dev`.
+5. Writes production `.env` with your MySQL values.
+6. Runs:
+   - `php artisan migrate --force`
+   - `php artisan h5p:install`
+   - `php artisan storage:link`
+7. Runs Laravel optimization commands.
+8. Publishes final app into your domain root.
 
-- creates Laravel 12 app,
-- copies this package under `packages/laravel-h5p`,
-- configures Composer path repository,
-- installs the package,
-- prepares `.env` and app key,
-- creates deploy zip for Plesk upload.
+## Required input at deploy time
 
-Options:
-
-```bash
-./scripts/build_full_platform.sh --help
-```
-
----
-
-## 4) Post-integration Laravel configuration
-
-Inside the generated Laravel app:
-
-1. Configure MySQL in `.env`:
-   ```env
-   DB_CONNECTION=mysql
-   DB_HOST=127.0.0.1
-   DB_PORT=3306
-   DB_DATABASE=your_db
-   DB_USERNAME=your_user
-   DB_PASSWORD=your_password
-   ```
-
-2. Run migrations and H5P installer:
-   ```bash
-   php artisan migrate --force
-   php artisan h5p:install
-   ```
-
-3. Production optimization:
-   ```bash
-   php artisan config:cache
-   php artisan route:cache
-   php artisan view:cache
-   ```
-
----
-
-## 5) Health checklist
-
-- Laravel home route loads without error.
-- `php artisan about` succeeds.
-- `php artisan h5p:status` succeeds.
-- H5P tables exist in MySQL (`h5p_*`).
-- `storage/app/public/h5p` exists and is writable.
+- MySQL DB name
+- MySQL username
+- MySQL password
+- Application URL
 
