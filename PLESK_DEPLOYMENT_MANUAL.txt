@@ -1,0 +1,132 @@
+Zero-Local-Build Deployment Manual
+(Laravel Platform + Laravel-H5P package on Ubuntu 22 / Plesk / MySQL)
+======================================================================
+
+You asked for: download branch zip, upload to Plesk, and deploy.
+This branch supports exactly that flow.
+
+What this branch provides
+-------------------------
+After extracting this branch in `httpdocs`, you can deploy in two ways:
+
+1) CLI mode:
+   `./scripts/auto_deploy_on_vps.sh`
+
+2) Web-button mode:
+   open `deploy-web/index.php` and click **Run Deployment**
+
+Both modes run the same deployment script and will:
+- create a full Laravel 12 app,
+- integrate this package as local source,
+- configure `.env` for MySQL,
+- run migrations + `php artisan h5p:install`,
+- optimize Laravel and publish final app into domain root.
+
+
+A) PLESK PREP
+-------------
+1. Plesk -> Websites & Domains -> your domain.
+2. Hosting Settings -> ensure PHP is 8.2+.
+3. PHP settings recommended:
+   - memory_limit: 512M
+   - max_execution_time: 120+
+   - upload_max_filesize/post_max_size: 64M+
+
+
+B) CREATE MYSQL DATABASE (PLESK + PHPMYADMIN)
+----------------------------------------------
+1. Plesk -> Databases -> Add Database.
+2. Create DB user with full privileges on this DB.
+3. Open phpMyAdmin and verify login.
+
+
+C) UPLOAD BRANCH ZIP
+--------------------
+1. Download this branch zip from GitHub.
+2. Upload zip to `httpdocs` via Plesk File Manager.
+3. Extract zip in `httpdocs`.
+
+
+D) DEPLOY OPTION 1: CLI MODE
+-----------------------------
+In Plesk Terminal (or SSH), at `httpdocs`:
+
+  chmod +x scripts/auto_deploy_on_vps.sh
+  ./scripts/auto_deploy_on_vps.sh
+
+Enter prompts:
+- MySQL DB name
+- MySQL username
+- MySQL password
+- App URL (e.g. `https://your-domain.com`)
+
+
+E) DEPLOY OPTION 2: WEB-BUTTON MODE
+------------------------------------
+1. Configure deployment password (choose one method):
+
+   Method A (Plesk env var):
+   - Plesk -> Websites & Domains -> Apache & nginx Settings
+   - In "Additional Apache directives" add:
+
+     SetEnv H5P_WEB_DEPLOY_PASSWORD "choose-a-strong-random-password"
+
+   Method B (codebase file in File Manager):
+   - Create file: `httpdocs/deploy-web/.deploy-password`
+   - Put only the password text on first line
+
+2. Open in browser:
+
+   https://your-domain.com/deploy-web/index.php
+
+3. Enter:
+   - Deployment password
+   - DB name
+   - DB user
+   - DB password
+   - App URL
+
+4. Click **Run Deployment**.
+5. Watch progress log on the same page.
+
+
+F) AFTER DEPLOY
+---------------
+Set document root to:
+
+  httpdocs/public
+
+
+G) FINAL CHECKS
+---------------
+Run:
+
+  php artisan about
+  php artisan h5p:status
+
+Browser checks:
+- home page loads,
+- H5P routes load,
+- H5P upload works,
+- `h5p_*` tables exist in MySQL.
+
+
+H) IMPORTANT NOTES
+------------------
+- This repository is a package (`composer type=library`), not standalone app.
+- The included deploy script builds full Laravel platform on the VPS.
+- No local build required.
+
+
+I) TROUBLESHOOTING
+------------------
+1. Composer network error on VPS:
+   - allow outbound HTTPS to Packagist/GitHub.
+
+2. DB errors:
+   - validate credentials in phpMyAdmin,
+   - rerun `php artisan migrate --force`.
+
+3. Permission errors:
+   - ensure web user can write `storage/` and `bootstrap/cache/`.
+

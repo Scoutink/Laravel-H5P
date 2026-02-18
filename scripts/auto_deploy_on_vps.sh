@@ -1,0 +1,129 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# One-command deploy helper for Plesk VPS after uploading THIS repository zip.
+# It builds a full Laravel app in the current directory and integrates this package.
+
+usage() {
+  cat <<USAGE
+Usage: $0 [options]
+
+Options:
+  --db-name <name>       MySQL database name
+  --db-user <user>       MySQL username
+  --db-pass <pass>       MySQL password
+  --app-url <url>        Application URL (e.g. https://example.com)
+  --domain-root <path>   Domain root where repository zip was extracted (default: current dir)
+  --non-interactive      Fail instead of prompting when required values are missing
+  -h, --help             Show help
+USAGE
+}
+
+DB_NAME="${DB_NAME:-}"
+DB_USER="${DB_USER:-}"
+DB_PASS="${DB_PASS:-}"
+APP_URL="${APP_URL:-}"
+DOMAIN_ROOT="$(pwd)"
+NON_INTERACTIVE=0
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --db-name) DB_NAME="$2"; shift 2 ;;
+    --db-user) DB_USER="$2"; shift 2 ;;
+    --db-pass) DB_PASS="$2"; shift 2 ;;
+    --app-url) APP_URL="$2"; shift 2 ;;
+    --domain-root) DOMAIN_ROOT="$2"; shift 2 ;;
+    --non-interactive) NON_INTERACTIVE=1; shift ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "Unknown argument: $1"; usage; exit 1 ;;
+  esac
+done
+
+if [[ ! -f "$DOMAIN_ROOT/composer.json" ]]; then
+  echo "Run this script from the extracted Laravel-H5P repository root or pass --domain-root."
+  exit 1
+fi
+
+if [[ -z "$DB_NAME" ]]; then
+  if [[ "$NON_INTERACTIVE" -eq 1 ]]; then echo "Missing required --db-name"; exit 1; fi
+  read -rp "MySQL database name: " DB_NAME
+fi
+if [[ -z "$DB_USER" ]]; then
+  if [[ "$NON_INTERACTIVE" -eq 1 ]]; then echo "Missing required --db-user"; exit 1; fi
+  read -rp "MySQL username: " DB_USER
+fi
+if [[ -z "$DB_PASS" ]]; then
+  if [[ "$NON_INTERACTIVE" -eq 1 ]]; then echo "Missing required --db-pass"; exit 1; fi
+  read -rsp "MySQL password: " DB_PASS
+  echo
+fi
+if [[ -z "$APP_URL" ]]; then
+  if [[ "$NON_INTERACTIVE" -eq 1 ]]; then echo "Missing required --app-url"; exit 1; fi
+  read -rp "App URL (e.g. https://example.com): " APP_URL
+fi
+
+WORKDIR="$DOMAIN_ROOT/.build-laravel-h5p-platform"
+APP_DIR="$WORKDIR/app"
+PACKAGE_DST="$APP_DIR/packages/laravel-h5p"
+
+rm -rf "$WORKDIR"
+mkdir -p "$WORKDIR"
+
+echo "[1/8] Creating Laravel 12 project"
+composer create-project laravel/laravel:^12.0 "$APP_DIR"
+
+echo "[2/8] Copying package source"
+mkdir -p "$APP_DIR/packages"
+rsync -a --delete --exclude '.git' --exclude 'vendor' --exclude 'build' --exclude '.build-laravel-h5p-platform' "$DOMAIN_ROOT/" "$PACKAGE_DST/"
+
+echo "[3/8] Wiring local package repository"
+cd "$APP_DIR"
+composer config repositories.laravel-h5p '{"type":"path","url":"packages/laravel-h5p","options":{"symlink":false}}'
+composer require djoudi/laravel-h5p:@dev
+
+echo "[4/8] Configuring environment"
+cp .env.example .env
+php artisan key:generate
+php -r "
+file_put_contents('.env', preg_replace([
+'/^APP_ENV=.*/m',
+'/^APP_DEBUG=.*/m',
+'/^APP_URL=.*/m',
+'/^DB_CONNECTION=.*/m',
+'/^DB_HOST=.*/m',
+'/^DB_PORT=.*/m',
+'/^DB_DATABASE=.*/m',
+'/^DB_USERNAME=.*/m',
+'/^DB_PASSWORD=.*/m'
+], [
+'APP_ENV=production',
+'APP_DEBUG=false',
+'APP_URL={$argv[1]}',
+'DB_CONNECTION=mysql',
+'DB_HOST=127.0.0.1',
+'DB_PORT=3306',
+'DB_DATABASE={$argv[2]}',
+'DB_USERNAME={$argv[3]}',
+'DB_PASSWORD={$argv[4]}'
+], file_get_contents('.env')));" "$APP_URL" "$DB_NAME" "$DB_USER" "$DB_PASS"
+
+echo "[5/8] Installing production dependencies"
+composer install --no-dev --optimize-autoloader
+
+echo "[6/8] Running migrations + H5P installation"
+php artisan migrate --force
+php artisan h5p:install
+php artisan storage:link || true
+
+echo "[7/8] Optimizing"
+php artisan optimize:clear
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+
+echo "[8/8] Publishing app to domain root"
+find "$DOMAIN_ROOT" -mindepth 1 -maxdepth 1 ! -name '.build-laravel-h5p-platform' -exec rm -rf {} +
+cp -a "$APP_DIR"/. "$DOMAIN_ROOT"/
+rm -rf "$WORKDIR"
+
+echo "Deployment completed. Ensure Plesk document root points to httpdocs/public"

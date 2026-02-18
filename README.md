@@ -119,6 +119,21 @@ storage/app/public/h5p/
 └── temp/         # Temporary files
 ```
 
+## 🧭 Deploying as Zip on Plesk (No Local Build)
+
+You can deploy this branch directly from a GitHub zip upload:
+
+1. Upload and extract this branch in Plesk `httpdocs`.
+2. Deploy either by:
+   - CLI script: `./scripts/auto_deploy_on_vps.sh`
+   - Web UI: open `deploy-web/index.php` in browser and click **Run Deployment** (set `H5P_WEB_DEPLOY_PASSWORD` or `deploy-web/.deploy-password` first)
+3. Set document root to `httpdocs/public`.
+
+See:
+
+- `PLESK_DEPLOYMENT_MANUAL.txt` (step-by-step Plesk + phpMyAdmin guide)
+- `docs/full-platform-integration.md` (what the script integrates internally)
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please read our contributing guidelines.
