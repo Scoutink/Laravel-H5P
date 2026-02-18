@@ -63,9 +63,17 @@ Enter prompts:
 
 E) DEPLOY OPTION 2: WEB-BUTTON MODE
 ------------------------------------
-1. In Plesk, set environment variable for protection:
+1. Configure deployment password (choose one method):
 
-   H5P_WEB_DEPLOY_PASSWORD=choose-a-strong-random-password
+   Method A (Plesk env var):
+   - Plesk -> Websites & Domains -> Apache & nginx Settings
+   - In "Additional Apache directives" add:
+
+     SetEnv H5P_WEB_DEPLOY_PASSWORD "choose-a-strong-random-password"
+
+   Method B (codebase file in File Manager):
+   - Create file: `httpdocs/deploy-web/.deploy-password`
+   - Put only the password text on first line
 
 2. Open in browser:
 

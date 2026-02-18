@@ -44,5 +44,8 @@ So deployment must assemble a Laravel application and include this package as de
 
 ## Web deployer safety
 
-Before using `deploy-web/index.php`, set `H5P_WEB_DEPLOY_PASSWORD` in Plesk environment variables.
-This password is required by the page before it can start deployment.
+Before using `deploy-web/index.php`, configure deployment password via either:
+- Plesk environment variable `H5P_WEB_DEPLOY_PASSWORD`, or
+- file `deploy-web/.deploy-password` in the extracted codebase.
+
+The page will reject deployment if neither is configured.

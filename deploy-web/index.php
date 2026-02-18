@@ -19,12 +19,21 @@ if (empty($_SESSION['csrf'])) {
 $message = '';
 $error = '';
 
+$expectedPassword = getenv('H5P_WEB_DEPLOY_PASSWORD') ?: '';
+if ($expectedPassword === '') {
+    $passwordFile = $root . '/deploy-web/.deploy-password';
+    if (is_readable($passwordFile)) {
+        $expectedPassword = trim((string) file_get_contents($passwordFile));
+    }
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!hash_equals($_SESSION['csrf'], $_POST['csrf'] ?? '')) {
         $error = 'Invalid CSRF token.';
     } elseif (!empty($_POST['admin_password'])) {
-        $expected = getenv('H5P_WEB_DEPLOY_PASSWORD') ?: 'change-me-now';
-        if (!hash_equals($expected, (string) $_POST['admin_password'])) {
+        if ($expectedPassword === '') {
+            $error = 'Deployment password not configured. Set H5P_WEB_DEPLOY_PASSWORD or deploy-web/.deploy-password';
+        } elseif (!hash_equals($expectedPassword, (string) $_POST['admin_password'])) {
             $error = 'Invalid deployment password.';
         }
     } else {
@@ -92,7 +101,7 @@ $logOutput = file_exists($logFile)
 </head>
 <body>
   <h1>Laravel H5P One-Click Deployer</h1>
-  <p>Set environment variable <code>H5P_WEB_DEPLOY_PASSWORD</code> in Plesk before use.</p>
+  <p>Set password via env var <code>H5P_WEB_DEPLOY_PASSWORD</code> <strong>or</strong> file <code>deploy-web/.deploy-password</code> before use.</p>
 
   <?php if ($message): ?><div class="ok"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
   <?php if ($error): ?><div class="err"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
